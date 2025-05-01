@@ -25,3 +25,29 @@ exports.updateLocation = async (req, res, next) => {
     next(err);
   }
 };
+
+// GET /api/users/nearby?lat=..&lng=..&radius=5
+exports.getNearbyUsers = async (req, res, next) => {
+    try {
+      const { lat, lng, radius } = req.query;
+  
+      if (!lat || !lng || !radius) {
+        return res.status(400).json({ message: 'lat, lng, and radius are required' });
+      }
+  
+      const users = await User.find({
+        location: {
+          $near: {
+            $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+            $maxDistance: parseFloat(radius) * 1000, // radius in km -> meters
+          },
+        },
+        online: true,
+        _id: { $ne: req.user.id },
+      }).select('name email location');
+  
+      res.status(200).json({ count: users.length, users });
+    } catch (err) {
+      next(err);
+    }
+  };
